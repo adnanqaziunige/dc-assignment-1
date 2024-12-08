@@ -33,10 +33,12 @@ class Backup(Simulation):
 
     # type annotations for `Node` are strings here to allow a forward declaration:
     # https://stackoverflow.com/questions/36193540/self-reference-or-forward-reference-of-type-annotations-in-python
-    def __init__(self, nodes: List['Node']):
+    def __init__(self, nodes: List['Node'],avg_times_first,avg_times_second,max_t):
         super().__init__()  # call the __init__ method of parent class
         self.nodes = nodes
-
+        self.avg_times_first=avg_times_first
+        self.avg_times_second=avg_times_second
+        self.max_t=max_t
         # we add to the event queue the first event of each node going online and of failing
         for node in nodes:
             self.schedule(node.arrival_time, Online(node))
@@ -137,6 +139,7 @@ class Node:
         self.current_download: Optional[TransferComplete] = None
 
         self.left=False
+        self.recover_t=-1
 
     def find_block_to_back_up(self):
         """Returns the block id of a block that needs backing up, or None if there are none."""
@@ -254,6 +257,7 @@ class Recover(Online):
         if not node.left:
 
             sim.log_info(f"{node} recovers")
+            node.recover_t=sim.t
             node.failed = False
             super().process(sim)
             sim.schedule(exp_rv(node.average_lifetime), Fail(node))
@@ -301,6 +305,7 @@ class Fail(Disconnection):
 
     def process(self, sim: Backup):
         sim.log_info(f"{self.node} fails")
+        
         self.disconnect()
         node = self.node
         node.failed = True
@@ -361,12 +366,21 @@ class BlockBackupComplete(TransferComplete):
         peer.remote_blocks_held[owner] = self.block_id
 
 
+max_t=-1
 class BlockRestoreComplete(TransferComplete):
     def update_block_state(self,sim:Backup):
         owner = self.downloader
         owner.local_blocks[self.block_id] = True
         if sum(owner.local_blocks) == owner.k:  # we have exactly k local blocks, we have all of them then
-            logging.info(f"{format_timespan(sim.t)}: {owner} has fully recovered its data.")
+            x=sim.t-owner.recover_t
+            time=format_timespan(x)
+            ctime=format_timespan(sim.t)
+            if sim.t>(sim.max_t/2):
+                sim.avg_times_second.append(x)
+            else:
+                sim.avg_times_first.append(x)
+            logging.info(f"{ctime}: {owner} took {time} time to restore")
+            logging.info(f"{ctime}: {owner} has fully recovered its data.")
 
 
 def main():
@@ -402,8 +416,10 @@ def main():
         # the `callable(p1, p2, *args)` idiom is equivalent to `callable(p1, p2, args[0], args[1], ...)
         nodes.extend(Node(f"{node_class}-{i}", *cfg) for i in range(class_config.getint('number')))
     sim = Backup(nodes)
-    sim.run(parse_timespan(args.max_t))
+    max_t=parse_timespan(args.max_t)
+    sim.run(max_t)
     sim.log_info(f"Simulation over")
+    
 
 
 if __name__ == '__main__':

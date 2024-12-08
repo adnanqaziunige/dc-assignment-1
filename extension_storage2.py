@@ -9,7 +9,7 @@ from discrete_event_sim import Simulation, Event
 from typing import Optional, List
 from humanfriendly import format_timespan, parse_size, parse_timespan
 
-from edit_storage import NodeEvent,Node,Backup,exp_rv,Online
+from edit_storage import NodeEvent,Node,Backup,exp_rv,Online,Fail
 
 logging.basicConfig(filename="storage.log",format='{levelname}:{message}', level=logging.INFO, style='{')  # output info on stdout
 
@@ -23,6 +23,8 @@ class JoinNetwork(NodeEvent):
             sim.nodes.append(node)
             print(f"{format_timespan(sim.t)}: {node} joined the network")
             sim.schedule(exp_rv(node.average_uptime), Online(node))
+            sim.schedule(exp_rv(node.average_lifetime), Fail(node))
+
 
 
 
@@ -46,7 +48,7 @@ def main():
     parser.add_argument("--max-t", default="100 years")
     parser.add_argument("--seed", help="random seed")
     parser.add_argument("--verbose", action='store_true')
-    parser.add_argument("--join_time", type=float, default=31536000, help="How much Time after nodes join the network") # after one year other nodes join
+    # parser.add_argument("--join_time", type=float, default=3* 31536000, help="How much Time after nodes join the network") # after one year other nodes join
     args = parser.parse_args()
 
     if args.seed:
@@ -66,9 +68,10 @@ def main():
         ('average_lifetime', parse_timespan), ('average_recover_time', parse_timespan),
         ('arrival_time', parse_timespan)
     ]
-    t=2 #some dynamic
+    t=18 #some dynamic
     c=0
     lnodes=[]
+   
     for node_class in config.sections():
         class_config = config[node_class]
         cfg = [parse(class_config[name]) for name, parse in parsing_functions]
@@ -79,13 +82,27 @@ def main():
      
         
             lnodes.extend(Node(f"{node_class}-{i}", *cfg) for i in range(t,initial+1))
-
+    avg_times_first=[]
+    avg_times_second=[]
     # Initialize simulation and schedule dynamic behaviors
-    sim = Backup(nodes)
-    schedule_dynamic_behaviors(sim, lnodes, args.join_time)
-    sim.run(parse_timespan(args.max_t))
+    max_t=parse_timespan(args.max_t)
+    sim = Backup(nodes,avg_times_first,avg_times_second,max_t)
+    schedule_dynamic_behaviors(sim, lnodes, max_t/2)
+    sim.run(max_t)
     sim.log_info("Simulation over")
+    print(format_timespan(sum(sim.avg_times_first)/len(sim.avg_times_first)))
+    print(format_timespan(sum(sim.avg_times_second)/len(sim.avg_times_second)))
 
 
 if __name__ == '__main__':
     main()
+
+"""
+what if we increase the no. of nodes later? it affects throughput due to more coordination in a bad network 
+
+see the 't' parameter above
+Latency in Recovery:
+
+    Effect: Additional nodes may introduce some delay in data retrieval, especially if nodes are geographically distant or if the network is not optimized for quick data recovery.
+    Why: While having more nodes may increase redundancy, the process of retrieving data from nodes that are farther away or less optimized can lead to slower recovery times in certain scenarios.
+"""

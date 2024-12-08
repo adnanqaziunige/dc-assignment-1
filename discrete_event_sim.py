@@ -50,6 +50,7 @@ class Event:
     You may need to define __init__ to set up all the necessary information.
     """
 
+
     def process(self, sim: Simulation):
         raise NotImplementedError
 
