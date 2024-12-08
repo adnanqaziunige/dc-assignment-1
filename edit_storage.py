@@ -60,6 +60,7 @@ class Backup(Simulation):
             event = BlockRestoreComplete(uploader, downloader, block_id)
         else:
             event = BlockBackupComplete(uploader, downloader, block_id)
+            logging.info(f"{format_timespan(self.t)}: pushed BlockBackupComplete from {uploader} to {downloader}")
         self.schedule(delay, event)
         uploader.current_upload = downloader.current_download = event
 
@@ -73,7 +74,7 @@ class Backup(Simulation):
         # print(f'{format_timespan(self.t)}: {msg}')
 
 
-@dataclass(eq=False)  # auto initialization from parameters below (won't consider two nodes with same state as equal)
+@dataclass(eq=False) #???  # auto initialization from parameters below (won't consider two nodes with same state as equal)
 class Node:
     """Class representing the configuration of a given node."""
 
@@ -135,6 +136,8 @@ class Node:
         self.current_upload: Optional[TransferComplete] = None
         self.current_download: Optional[TransferComplete] = None
 
+        self.left=False
+
     def find_block_to_back_up(self):
         """Returns the block id of a block that needs backing up, or None if there are none."""
 
@@ -172,6 +175,8 @@ class Node:
             # downloading anything currently, schedule the backup of block_id from self to peer
             if (peer is not self and peer.online and peer not in remote_owners and peer.current_download is None
                     and peer.free_space >= self.block_size):
+                logging.info(f'{format_timespan(sim.t)}: schedule_next_upload from {self.name} to {peer.name}')
+
                 sim.schedule_transfer(self, peer, block_id, restore=False)
                 return
 
@@ -197,6 +202,7 @@ class Node:
                 and self.free_space >= peer.block_size):
                 block_id = peer.find_block_to_back_up()
                 if block_id is not None:
+                    logging.info(f'{format_timespan(sim.t)}: schedule_next_download from {peer.name} to {self.name}')
                     sim.schedule_transfer(peer, self, block_id, restore=False)
                     return
 
@@ -229,7 +235,7 @@ class Online(NodeEvent):
 
     def process(self, sim: Backup):
         node = self.node
-        if node.online or node.failed:
+        if node.left or node.online or node.failed:
             return
         node.online = True
         # schedule next upload and download
@@ -245,10 +251,12 @@ class Recover(Online):
 
     def process(self, sim: Backup):
         node = self.node
-        sim.log_info(f"{node} recovers")
-        node.failed = False
-        super().process(sim)
-        sim.schedule(exp_rv(node.average_lifetime), Fail(node))
+        if not node.left:
+
+            sim.log_info(f"{node} recovers")
+            node.failed = False
+            super().process(sim)
+            sim.schedule(exp_rv(node.average_lifetime), Fail(node))
 
 
 class Disconnection(NodeEvent):
@@ -279,7 +287,8 @@ class Offline(Disconnection):
 
     def process(self, sim: Backup):
         node = self.node
-        if node.failed or not node.online:
+
+        if node.left or node.failed or not node.online:
             return
         assert node.online
         self.disconnect()
@@ -325,8 +334,10 @@ class TransferComplete(Event):
         if self.canceled:
             return  # this transfer was canceled, so ignore this event
         uploader, downloader = self.uploader, self.downloader
+        if uploader.current_upload is None or downloader.current_download is None: #???
+            return
         assert uploader.online and downloader.online
-        self.update_block_state()
+        self.update_block_state(sim)
         uploader.current_upload = downloader.current_download = None
         uploader.schedule_next_upload(sim)
         downloader.schedule_next_download(sim)
@@ -335,14 +346,14 @@ class TransferComplete(Event):
                          f"{sum(peer is not None for peer in node.backed_up_blocks)} backed up blocks, "
                          f"{len(node.remote_blocks_held)} remote blocks held")
 
-    def update_block_state(self):
+    def update_block_state(self,sim:Backup):
         """Needs to be specified by the subclasses, `BackupComplete` and `DownloadComplete`."""
         raise NotImplementedError
 
 
 class BlockBackupComplete(TransferComplete):
 
-    def update_block_state(self):
+    def update_block_state(self,sim:Backup):
         owner, peer = self.uploader, self.downloader
         peer.free_space -= owner.block_size
         assert peer.free_space >= 0
@@ -351,11 +362,11 @@ class BlockBackupComplete(TransferComplete):
 
 
 class BlockRestoreComplete(TransferComplete):
-    def update_block_state(self):
+    def update_block_state(self,sim:Backup):
         owner = self.downloader
         owner.local_blocks[self.block_id] = True
         if sum(owner.local_blocks) == owner.k:  # we have exactly k local blocks, we have all of them then
-            logging.info(f"{owner} has fully recovered its data.")
+            logging.info(f"{format_timespan(sim.t)}: {owner} has fully recovered its data.")
 
 
 def main():

@@ -41,7 +41,6 @@ class Backup(Simulation):
 
         # we add to the event queue the first event of each node going online and of failing
         for node in nodes:
-            print("arrival",node.arrival_time)
             self.schedule(node.arrival_time, Online(node))
             self.schedule(node.arrival_time + exp_rv(node.average_lifetime), Fail(node))
 
@@ -71,6 +70,7 @@ class Backup(Simulation):
 
     def log_info(self, msg):
         """Override method to get human-friendly logging for time."""
+        # logging.info(msg)
 
         print(f'{format_timespan(self.t)}: {msg}')
 
