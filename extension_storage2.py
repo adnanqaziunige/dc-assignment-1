@@ -25,39 +25,17 @@ class JoinNetwork(NodeEvent):
             sim.schedule(exp_rv(node.average_uptime), Online(node))
 
 
-class LeaveNetwork(NodeEvent):
-    """A node leaves the network permanently."""
-    def process(self, sim: Backup):
-        node = self.node
-        if node in sim.nodes:
-            
-            node.left=True#???
-            print(f"{format_timespan(sim.t)}: {node} left the network permanently")
-            # Cancel ongoing transfers for the node
-            current_upload = node.current_upload
-            current_download = node.current_download
-            if current_upload:
-                current_upload.canceled = True
-                current_upload.downloader.current_download = None
-            if current_download:
-                current_download.canceled = True
-                current_download.uploader.current_upload = None
-        else:
-            print(f"{format_timespan(sim.t)}: {node} was not in the network")
+
 
 
 # Extend the main simulation logic to schedule join and leave events
-def schedule_dynamic_behaviors(sim: Backup, nodes: List[Node], join_rate: float, leave_rate: float):
-    """Schedule join and leave events for nodes."""
+def schedule_dynamic_behaviors(sim: Backup, nodes: List[Node], join_time: float,):
+    """Schedule join events for nodes."""
     for node in nodes:
-        join_time = exp_rv(join_rate)
-        leave_time = exp_rv(leave_rate)
         print(f"{format_timespan(join_time)}: {node.name} joined")
         # Ensure nodes start by joining the network
         sim.schedule(join_time, JoinNetwork(node))
 
-        # Schedule leave events only for nodes that have joined
-        sim.schedule(join_time + leave_time, LeaveNetwork(node))
 
 
 
@@ -68,8 +46,7 @@ def main():
     parser.add_argument("--max-t", default="100 years")
     parser.add_argument("--seed", help="random seed")
     parser.add_argument("--verbose", action='store_true')
-    parser.add_argument("--join_rate", type=float, default=31536000, help="Average rate of nodes joining the network") # approx 1 join in one year 
-    parser.add_argument("--leave_rate", type=float, default=31536000*10, help="Average rate of nodes leaving the network")
+    parser.add_argument("--join_time", type=float, default=31536000, help="How much Time after nodes join the network") # after one year other nodes join
     args = parser.parse_args()
 
     if args.seed:
@@ -105,7 +82,7 @@ def main():
 
     # Initialize simulation and schedule dynamic behaviors
     sim = Backup(nodes)
-    schedule_dynamic_behaviors(sim, lnodes, args.join_rate, args.leave_rate)
+    schedule_dynamic_behaviors(sim, lnodes, args.join_time)
     sim.run(parse_timespan(args.max_t))
     sim.log_info("Simulation over")
 
