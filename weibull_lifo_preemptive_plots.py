@@ -3,7 +3,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-from weibull import Queues
+from weibull_premptive_lifo import Queues
 from part2 import MonitorSIR,compute_time_averaged_fractions
 
 max_queue_length = 15
@@ -43,7 +43,7 @@ for idx, lambd in enumerate(choices, 1):
         plt.grid(True)
 
 
-plt.suptitle("Simulated Queue Lengths for Various Arrival Rates(Non preemptive FIFO)", fontsize=16, y=0.98)  # Add a global title
+plt.suptitle("Simulated Queue Lengths for Various Arrival Rates (preemptive LIFO)", fontsize=16, y=0.98)  # Add a global title
 plt.tight_layout(rect=[0, 0, 1, 0.97])
 plt.subplots_adjust(hspace=0.4, wspace=0.3)
 plt.show()
