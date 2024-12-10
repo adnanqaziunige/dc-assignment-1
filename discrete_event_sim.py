@@ -33,7 +33,7 @@ class Simulation:
 
         while self.events:  # TODO: as long as the event queue is not empty:
             t, event = heapq.heappop(self.events) # TODO: get the first event from the queue
-            # print(t,event)
+            # print(t)
             if t > max_t:
                 break
             self.t = t

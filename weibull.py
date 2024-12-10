@@ -24,7 +24,7 @@ from workloads import weibull_generator
 
 
 # columns saved in the CSV file
-CSV_COLUMNS = ['lambd', 'mu', 'max_t', 'n', 'd', 'w']
+CSV_COLUMNS = ['lambd', 'mu', 'max_t', 'n', 'd','shape', 'w']
 
 
 class Queues(Simulation):
@@ -35,7 +35,7 @@ class Queues(Simulation):
     the shortest one.
     """
 
-    def __init__(self, lambd, mu, n, d):
+    def __init__(self, lambd, mu, n, d,shape=1):
         super().__init__()
         self.running = [None] * n  # if not None, the id of the running job (per queue)
         self.queues = [collections.deque() for _ in range(n)]  # FIFO queues of the system
@@ -47,8 +47,8 @@ class Queues(Simulation):
         self.d = d
         self.mu = mu
         self.arrival_rate = lambd * n  # frequency of new jobs is proportional to the number of queues
-        self.gen_lambbd = weibull_generator(1, 1/self.arrival_rate)
-        self.gen_mu = weibull_generator(1, 1/self.mu)
+        self.gen_lambbd = weibull_generator(shape, 1/self.arrival_rate)
+        self.gen_mu = weibull_generator(shape, 1/self.mu)
         self.schedule(self.gen_lambbd(), Arrival(0))  # schedule the first arrival
       
 
@@ -137,6 +137,8 @@ def main():
     parser.add_argument('--d', type=int, default=1, help="number of queues to sample")
     parser.add_argument('--csv', help="CSV file in which to store results")
     parser.add_argument("--seed", help="random seed")
+    parser.add_argument("--shape", type=float, default=1, help="Weibull shape parameter")
+
     parser.add_argument("--verbose", action='store_true')
     args = parser.parse_args()
 
