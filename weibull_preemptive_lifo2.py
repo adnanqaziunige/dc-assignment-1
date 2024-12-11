@@ -93,14 +93,6 @@ class Arrival(Event):
         # check the key argument of the min built-in function:
         # https://docs.python.org/3/library/functions.html#min
 
-        # implement the following logic:
-
-        # if there is no running job in the queue:
-            # set the incoming one
-            # schedule its completion
-        # otherwise, put the job into the queue
-        # schedule the arrival of the next job
-
         # if you are looking for inspiration, check the `Completion` class below
         if sim.running[queue_index] is not None:  # queue is not empty
             current_job_id, service_time,left_time = sim.running[queue_index]
@@ -113,7 +105,7 @@ class Arrival(Event):
         
         new_service_time=sim.gen_mu()
         # sim.queues[queue_index].appendleft((self.id, None))  # New job with no preemption
-        sim.running[queue_index] = (self.id, service_time,None)
+        sim.running[queue_index] = (self.id, new_service_time,None)
         sim.schedule_completion(self.id, queue_index,new_service_time)
         sim.schedule_arrival(self.id+1)  # schedule its completion
 
