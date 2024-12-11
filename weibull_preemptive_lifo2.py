@@ -69,7 +69,7 @@ class Queues(Simulation):
         # schedule the time of the completion event
         # check `schedule_arrival` for inspiration
         
-        service_time = left_time if left_time is not None else self.gen_mu()
+        service_time = left_time if left_time is not None else service_time
         self.schedule(service_time, Completion(job_id, queue_index))
 
     def queue_len(self, i):
@@ -111,9 +111,10 @@ class Arrival(Event):
             
             sim.queues[queue_index].appendleft((current_job_id, service_time,left_time))  # Push preempted job to front           
         
+        new_service_time=sim.gen_mu()
         # sim.queues[queue_index].appendleft((self.id, None))  # New job with no preemption
-        sim.running[queue_index] = (self.id, sim.gen_mu(),None)
-        sim.schedule_completion(self.id, queue_index,None)
+        sim.running[queue_index] = (self.id, service_time,None)
+        sim.schedule_completion(self.id, queue_index,new_service_time)
         sim.schedule_arrival(self.id+1)  # schedule its completion
 
 
