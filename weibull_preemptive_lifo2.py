@@ -110,7 +110,7 @@ class Arrival(Event):
                 remaining_time = sim.t - sim.arrivals[current_job_id]  # Update remaining time
             sim.queues[queue_index].appendleft((current_job_id, remaining_time))  # Push preempted job to front           
         
-        sim.queues[queue_index].appendleft((self.id, None))  # New job with no preemption
+        # sim.queues[queue_index].appendleft((self.id, None))  # New job with no preemption
         sim.running[queue_index] = (self.id, None)
         sim.schedule_completion(self.id, queue_index)
         sim.schedule_arrival(self.id+1)  # schedule its completion
