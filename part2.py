@@ -10,8 +10,8 @@ from queue_sim import Queues
 lambdas = [0.5, 0.9, 0.95, 0.99]
 choices = [1, 2, 5, 10]
 mu = 1
-max_t = 1000
-n_servers=10
+max_t = 10000
+n_servers=20
 plot_interval=1
 
 class MonitorSIR(Event):
