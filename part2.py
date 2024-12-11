@@ -15,7 +15,6 @@ n_servers=10
 plot_interval=1
 
 class MonitorSIR(Event):
-    """At any configurable interval, we save the number of susceptible, infected and recovered individuals."""
 
     def __init__(self,lambd ,queue_snapshots,key,interval=1):
         self.interval = interval
