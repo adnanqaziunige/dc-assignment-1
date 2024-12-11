@@ -63,13 +63,13 @@ class Queues(Simulation):
 
         self.schedule( self.gen_lambbd(), Arrival(job_id))
 
-    def schedule_completion(self, job_id, queue_index,remaining_time=None):  # TODO: complete this method
+    def schedule_completion(self, job_id, queue_index,service_time,left_time=None):  # TODO: complete this method
         """Schedule the completion of a job."""
         
         # schedule the time of the completion event
         # check `schedule_arrival` for inspiration
         
-        service_time = remaining_time if remaining_time is not None else self.gen_mu()
+        service_time = left_time if left_time is not None else self.gen_mu()
         self.schedule(service_time, Completion(job_id, queue_index))
 
     def queue_len(self, i):
@@ -103,16 +103,17 @@ class Arrival(Event):
 
         # if you are looking for inspiration, check the `Completion` class below
         if sim.running[queue_index] is not None:  # queue is not empty
-            current_job_id, remaining_time = sim.running[queue_index]
-            if remaining_time is not None:
-                remaining_time -= sim.t - sim.arrivals[current_job_id]  # Update remaining time
-            else:
-                remaining_time = sim.t - sim.arrivals[current_job_id]  # Update remaining time
-            sim.queues[queue_index].appendleft((current_job_id, remaining_time))  # Push preempted job to front           
+            current_job_id, service_time,left_time = sim.running[queue_index]
+            elapsed_time = sim.t - sim.arrivals[current_job_id]  # Time spent so far
+            left_time = service_time - elapsed_time 
+            if(left_time<=0):
+                left_time=0
+            
+            sim.queues[queue_index].appendleft((current_job_id, service_time,left_time))  # Push preempted job to front           
         
         # sim.queues[queue_index].appendleft((self.id, None))  # New job with no preemption
-        sim.running[queue_index] = (self.id, None)
-        sim.schedule_completion(self.id, queue_index)
+        sim.running[queue_index] = (self.id, sim.gen_mu(),None)
+        sim.schedule_completion(self.id, queue_index,None)
         sim.schedule_arrival(self.id+1)  # schedule its completion
 
 
@@ -130,9 +131,9 @@ class Completion(Event):
             sim.completions[self.job_id] = sim.t
             queue = sim.queues[queue_index]
             if queue:  # queue is not empty
-                next_job_id, remaining_time = sim.queues[queue_index].popleft()
-                sim.running[queue_index] = (next_job_id, remaining_time) # assign the last interrupted job in the queue
-                sim.schedule_completion(next_job_id, queue_index, remaining_time)# schedule its completion
+                next_job_id, service_time,left_time = sim.queues[queue_index].popleft()
+                sim.running[queue_index] = (next_job_id, service_time,left_time) # assign the last interrupted job in the queue
+                sim.schedule_completion(next_job_id, queue_index, service_time,left_time)# schedule its completion
             
             else:
                 sim.running[queue_index] = None  # no job is running on the queue
