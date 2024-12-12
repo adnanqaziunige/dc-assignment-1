@@ -3,7 +3,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-from weibull_premptive_lifo2 import Queues
+from weibull_preemptive_lifo2 import Queues
 from part2 import MonitorSIR,compute_time_averaged_fractions
 
 max_queue_length = 15
